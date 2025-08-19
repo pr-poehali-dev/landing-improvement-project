@@ -1,14 +1,19 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import Icon from '@/components/ui/icon'
+import Preloader from '@/components/Preloader'
+import ParticleField from '@/components/ParticleField'
 
 const Index = () => {
   const [currentQuality, setCurrentQuality] = useState(0)
   const [selectedPlan, setSelectedPlan] = useState('gaming')
   const [isTextVisible, setIsTextVisible] = useState(true)
+  const [isLoading, setIsLoading] = useState(true)
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
+  const heroRef = useRef<HTMLDivElement>(null)
   
   const qualities = ['Качественный', 'Быстрый', 'Мощный', 'Дешевый']
   
@@ -23,6 +28,36 @@ const Index = () => {
     
     return () => clearInterval(interval)
   }, [])
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      setMousePosition({ x: e.clientX, y: e.clientY })
+    }
+    
+    window.addEventListener('mousemove', handleMouseMove)
+    return () => window.removeEventListener('mousemove', handleMouseMove)
+  }, [])
+
+  const handleCardMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const card = e.currentTarget
+    const rect = card.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+    const centerX = rect.width / 2
+    const centerY = rect.height / 2
+    const rotateX = (y - centerY) / 10
+    const rotateY = (centerX - x) / 10
+    
+    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.05, 1.05, 1.05)`
+  }
+
+  const handleCardMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.currentTarget.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)'
+  }
+
+  if (isLoading) {
+    return <Preloader onComplete={() => setIsLoading(false)} />
+  }
 
   const stats = [
     { number: '0', label: 'платных услуг', icon: 'CreditCard' },
@@ -98,7 +133,8 @@ const Index = () => {
   const currentPlans = selectedPlan === 'gaming' ? gamingPlans : databasePlans
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground relative overflow-x-hidden">
+      <ParticleField />
       {/* Header */}
       <header className="border-b border-border/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4">
@@ -127,7 +163,7 @@ const Index = () => {
       </header>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden py-24 px-6 hero-gradient">
+      <section ref={heroRef} className="relative overflow-hidden py-24 px-6 hero-gradient dynamic-gradient">
         <div className="container mx-auto relative z-10">
           <div className="flex flex-col lg:flex-row items-center justify-between">
             <div className="lg:w-1/2 space-y-8 animate-fade-in">
@@ -137,7 +173,7 @@ const Index = () => {
                     {qualities[currentQuality]}
                   </span>
                   <br />
-                  <span className="text-white">и мощный хостинг</span>
+                  <span className="text-white animate-gradient-shift">и мощный хостинг</span>
                 </h2>
               </div>
               
@@ -157,9 +193,11 @@ const Index = () => {
               <div className="relative">
                 <div className="w-80 h-80 rounded-full bg-gradient-to-br from-neon-purple/30 via-neon-green/20 to-neon-orange/20 blur-3xl animate-glow" />
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-9xl animate-pulse filter drop-shadow-2xl">👍</div>
+                  <div className="text-9xl animate-float filter drop-shadow-2xl cursor-pointer hover:scale-110 transition-transform duration-300">👍</div>
                 </div>
                 <div className="absolute inset-0 rounded-full border border-neon-purple/20 animate-pulse" />
+                <div className="absolute -top-4 -right-4 w-4 h-4 bg-neon-green rounded-full animate-ping" />
+                <div className="absolute -bottom-6 -left-6 w-6 h-6 bg-neon-orange rounded-full animate-bounce" />
               </div>
             </div>
           </div>
@@ -167,16 +205,22 @@ const Index = () => {
       </section>
 
       {/* Stats Section */}
-      <section className="py-20 px-6">
+      <section className="py-20 px-6 relative">
         <div className="container mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {stats.map((stat, index) => (
-              <Card key={index} className="bg-card/80 border-border/30 backdrop-blur-md hover:border-neon-purple/50 transition-all duration-500 animate-slide-up hover:scale-105 rounded-2xl" style={{ animationDelay: `${index * 0.1}s` }}>
-                <CardContent className="p-8 text-center">
-                  <div className="mb-6 inline-flex p-4 rounded-2xl bg-neon-purple/10">
+              <Card 
+                key={index} 
+                className="card-3d bg-card/80 border-border/30 backdrop-blur-md hover:border-neon-purple/50 transition-all duration-500 animate-slide-up rounded-2xl relative overflow-hidden" 
+                style={{ animationDelay: `${index * 0.1}s` }}
+                onMouseMove={handleCardMouseMove}
+                onMouseLeave={handleCardMouseLeave}
+              >
+                <CardContent className="p-8 text-center relative z-10">
+                  <div className="mb-6 inline-flex p-4 rounded-2xl bg-neon-purple/10 animate-pulse-glow">
                     <Icon name={stat.icon as any} size={32} className="text-neon-purple" />
                   </div>
-                  <div className="text-4xl font-bold text-neon-purple mb-3 font-mono">{stat.number}</div>
+                  <div className="text-4xl font-bold text-neon-purple mb-3 font-mono animate-pulse">{stat.number}</div>
                   <div className="text-muted-foreground text-lg">{stat.label}</div>
                 </CardContent>
               </Card>
@@ -200,16 +244,22 @@ const Index = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
             {advantages.map((advantage, index) => (
-              <Card key={index} className="bg-card/80 border-border/30 backdrop-blur-md hover:border-neon-purple/50 transition-all duration-500 animate-slide-up hover:scale-105 rounded-2xl" style={{ animationDelay: `${index * 0.1}s` }}>
-                <CardHeader className="pb-4">
+              <Card 
+                key={index} 
+                className="card-3d bg-card/80 border-border/30 backdrop-blur-md hover:border-neon-purple/50 transition-all duration-500 animate-slide-up rounded-2xl relative overflow-hidden" 
+                style={{ animationDelay: `${index * 0.1}s` }}
+                onMouseMove={handleCardMouseMove}
+                onMouseLeave={handleCardMouseLeave}
+              >
+                <CardHeader className="pb-4 relative z-10">
                   <div className="flex items-center space-x-4">
-                    <div className="p-3 rounded-2xl bg-neon-purple/20 border border-neon-purple/30">
+                    <div className="p-3 rounded-2xl bg-neon-purple/20 border border-neon-purple/30 animate-pulse-glow">
                       <Icon name={advantage.icon as any} size={28} className="text-neon-purple" />
                     </div>
                     <CardTitle className="text-2xl font-bold">{advantage.title}</CardTitle>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="relative z-10">
                   <p className="text-muted-foreground text-lg leading-relaxed">{advantage.description}</p>
                 </CardContent>
               </Card>
@@ -246,28 +296,34 @@ const Index = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto mt-16">
             {currentPlans.map((plan, index) => (
-              <Card key={plan.name} className={`relative bg-card/80 border-border/30 backdrop-blur-md hover:scale-105 transition-all duration-500 animate-slide-up rounded-3xl overflow-hidden ${index === 1 ? 'ring-2 ring-neon-purple glow-effect scale-105' : ''}`} style={{ animationDelay: `${index * 0.1}s` }}>
+              <Card 
+                key={plan.name} 
+                className={`card-3d relative bg-card/80 border-border/30 backdrop-blur-md transition-all duration-500 animate-slide-up rounded-3xl overflow-hidden ${index === 1 ? 'ring-2 ring-neon-purple glow-effect scale-105' : ''}`} 
+                style={{ animationDelay: `${index * 0.1}s` }}
+                onMouseMove={handleCardMouseMove}
+                onMouseLeave={handleCardMouseLeave}
+              >
                 {index === 1 && (
-                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <Badge className="bg-neon-purple text-black px-6 py-2 text-sm font-bold rounded-full">
+                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-20">
+                    <Badge className="bg-neon-purple text-black px-6 py-2 text-sm font-bold rounded-full animate-pulse">
                       Популярный
                     </Badge>
                   </div>
                 )}
-                <CardHeader className="text-center pb-4 pt-8">
+                <CardHeader className="text-center pb-4 pt-8 relative z-10">
                   <CardTitle className="text-3xl font-bold mb-4">{plan.name}</CardTitle>
-                  <CardDescription className="text-4xl font-bold text-neon-purple mb-2">
+                  <CardDescription className="text-4xl font-bold text-neon-purple mb-2 animate-gradient-shift">
                     {plan.price}
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4 px-6 pb-8">
+                <CardContent className="space-y-4 px-6 pb-8 relative z-10">
                   {plan.specs.map((spec, specIndex) => (
                     <div key={specIndex} className="flex items-center space-x-4 text-lg">
-                      <div className="w-2 h-2 rounded-full bg-neon-green" />
+                      <div className="w-2 h-2 rounded-full bg-neon-green animate-pulse" />
                       <span className="text-gray-200">{spec}</span>
                     </div>
                   ))}
-                  <Button className="w-full bg-neon-green hover:bg-neon-green/80 text-black font-bold mt-8 py-4 text-lg rounded-xl transition-all duration-300 hover:scale-105">
+                  <Button className="w-full bg-neon-green hover:bg-neon-green/80 text-black font-bold mt-8 py-4 text-lg rounded-xl transition-all duration-300 hover:scale-105 glow-effect">
                     Заказать
                   </Button>
                 </CardContent>
